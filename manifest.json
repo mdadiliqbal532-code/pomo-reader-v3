@@ -1,0 +1,48 @@
+{
+  "name": "DeenTimeR & PomoReader Pro (v16.0 Desktop)",
+  "short_name": "DeenTimeR Pro",
+  "description": "Desktop Polymath Life OS, Memory Beast FSRS Vault, 3D Wooden Bookshelf & PomoDoc Forge",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "▶️ Start 50m Deep Focus",
+      "short_name": "50m Focus",
+      "description": "Launch a 50-minute Pomodoro Study Session immediately",
+      "url": "./index.html?widget=start50",
+      "icons": [{ "src": "./icon.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "🃏 Memory Beast Flashcards",
+      "short_name": "Flashcards",
+      "description": "Review high-yield medical & polymath flashcards",
+      "url": "./index.html?widget=flashcards",
+      "icons": [{ "src": "./icon.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "📖 Resume Last Book",
+      "short_name": "Resume Book",
+      "description": "Jump straight to your last read page in PomoReader",
+      "url": "./index.html?widget=resume_book",
+      "icons": [{ "src": "./icon.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+    }
+  ]
+}
