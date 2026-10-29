@@ -1,7 +1,8 @@
 /* =========================================================================
    06-POMO-NOTE.JS (v16.0 PURE DESKTOP EDITION)
-   POMO NOTE MODULE: SIDE-BY-SIDE SCRATCHPAD, CLICKED-ANNOTATION INSPECTOR,
-   LINE NOTE & FILE ATTACHMENT VIEWER, TWO-WAY ANNOTATION SYNC & NOTES HUB (A1)
+   POMO NOTE MODULE: SIDE-BY-SIDE SCRATCHPAD, CLICKED ANNOTATION INSPECTOR,
+   LINE NOTE & FILE ATTACHMENT VIEWER, TWO-WAY ANNOTATION DELETION/SHARING,
+   AND GLOBAL NOTES & HIGHLIGHTS HUB (PANEL A1)
    ========================================================================= */
 (function() {
     window.haptic = window.haptic || function() {};
@@ -14,17 +15,8 @@
             .replace(/\r?\n/g, ' ');
     };
 
-    let activeViewingAnnId = null;
-
-    // Helpers to bridge cleanly with 04-pomo-reader.js
     function getActiveBook() {
         return window.PomoReaderCore ? window.PomoReaderCore.getActiveBook() : null;
-    }
-
-    function updatePageSvg(pageNum) {
-        if (window.PomoReaderCore?.updateSinglePageSvg) {
-            window.PomoReaderCore.updateSinglePageSvg(pageNum);
-        }
     }
 
     /* =========================================================================
@@ -55,10 +47,9 @@
     };
 
     /* =========================================================================
-       2. CLICKED ANNOTATION FLOATING INSPECTOR BAR & COLOR RE-STYLING
+       2. CLICKED ANNOTATION INSPECTOR BAR (RECOLOR, DICTIONARY, EDIT, DELETE)
        ========================================================================= */
     window.showClickedItemInspectorBar = function(ann, clientX, clientY) {
-        const activeBook = getActiveBook();
         let bar = document.getElementById('v5-clicked-ann-inspector');
         if (!bar) {
             bar = document.createElement('div');
@@ -66,6 +57,7 @@
             bar.className = "fixed z-[295] rounded-2xl shadow-2xl p-1.5 flex items-center gap-1.5";
             document.getElementById('reader-fullscreen-overlay')?.appendChild(bar);
         }
+        const activeBook = getActiveBook();
         const colors = ['#facc15', '#34d399', '#60a5fa', '#f472b6', '#fb923c', '#ef4444'];
         const safeAnnId = escapeJsStr(ann.id);
         const safeBookId = escapeJsStr(activeBook?.id || '');
@@ -98,7 +90,7 @@
             ann.updatedAt = Date.now();
             activeBook.lastModified = Date.now();
             saveReaderMeta();
-            updatePageSvg(ann.page);
+            window.PomoReaderCore?.updateSinglePageSvg(ann.page);
         }
     };
 
@@ -108,8 +100,10 @@
     };
 
     /* =========================================================================
-       3. LINE NOTE & FILE ATTACHMENT VIEWER MODAL
+       3. LINE NOTE & FILE ATTACHMENT VIEWER MODAL + TWO-WAY DELETE & SHARE
        ========================================================================= */
+    let activeViewingAnnId = null;
+
     window.openLineItemViewerModal = async function(annId) {
         const activeBook = getActiveBook();
         if (!activeBook) return;
@@ -153,7 +147,7 @@
             if (ann.note && ann.type === 'highlight') ann.type = 'note';
             ann.updatedAt = Date.now();
             saveReaderMeta();
-            updatePageSvg(ann.page);
+            window.PomoReaderCore?.updateSinglePageSvg(ann.page);
             showToast("💾 Note saved into book!");
         }
         document.getElementById('line-item-viewer-modal').classList.add('hidden');
@@ -186,7 +180,7 @@
                     ann.updatedAt = Date.now();
                     saveReaderMeta();
                     window.openLineItemViewerModal(ann.id);
-                    updatePageSvg(ann.page);
+                    window.PomoReaderCore?.updateSinglePageSvg(ann.page);
                 }
             };
             r.readAsDataURL(file);
@@ -195,9 +189,6 @@
         inp.click();
     });
 
-    /* =========================================================================
-       4. TWO-WAY ANNOTATION DELETION, SHARING & GLOBAL NOTES HUB (PANEL A1)
-       ========================================================================= */
     window.deleteAnnotationTwoWay = async function(bookId, annId) {
         const b = (window.readerBooks || []).find(x => x.id === bookId);
         if (!b) return;
@@ -208,22 +199,19 @@
         b.annotations.splice(idx, 1);
         if (!Array.isArray(b.deletedAnnotationIds)) b.deletedAnnotationIds = [];
         if (!b.deletedAnnotationIds.includes(annId)) b.deletedAnnotationIds.push(annId);
-
-        if (window.PomoReaderCore && window.PomoReaderCore.getSelectedShapeId() === annId) {
+        if (window.PomoReaderCore?.getSelectedShapeId() === annId) {
             window.PomoReaderCore.setSelectedShapeId(null);
         }
         window.hideClickedItemInspectorBar();
-
         b.rev = (b.rev || 1) + 1;
         b.lastModified = Date.now();
         b.pendingCloudSync = true;
         saveReaderMeta();
         window.renderA1GlobalAnnotations();
-
         const activeBook = getActiveBook();
         if (activeBook && activeBook.id === bookId) {
-            updatePageSvg(removed.page || 1);
-            window.PomoReaderCore?.renderBookTocAndBookmarksDrawer?.();
+            window.PomoReaderCore?.updateSinglePageSvg(removed.page || 1);
+            window.PomoReaderCore?.renderBookTocAndBookmarksDrawer();
         }
         showToast("🗑️ Deleted!");
     };
@@ -240,6 +228,9 @@
         }
     };
 
+    /* =========================================================================
+       4. GLOBAL NOTES, HIGHLIGHTS & BOOKMARKS HUB (SETTINGS PANEL A1)
+       ========================================================================= */
     window.renderA1GlobalAnnotations = function() {
         const listEl = document.getElementById('a1-global-annotations-list');
         if (!listEl) return;
@@ -253,9 +244,7 @@
                 allItems.push({ book: b, ann });
             });
         });
-        listEl.innerHTML = allItems.length
-            ? ''
-            : `<p class="text-xs text-slate-500 italic text-center p-6 bg-slate-950 rounded-2xl border border-slate-800">No matching annotations found.</p>`;
+        listEl.innerHTML = allItems.length ? '' : `<p class="text-xs text-slate-500 italic text-center p-6 bg-slate-950 rounded-2xl border border-slate-800">No matching annotations found.</p>`;
         allItems.forEach(({ book, ann }) => {
             const safeBookId = escapeJsStr(book.id);
             const safeAnnId = escapeJsStr(ann.id);
@@ -282,9 +271,7 @@
     // Public Module Handle for Future PomoNote Expansions
     window.PomoNote = {
         toggleScratchpad: window.toggleSplitScreenScratchpad,
-        openLineViewer: window.openLineItemViewerModal,
-        showInspector: window.showClickedItemInspectorBar,
-        hideInspector: window.hideClickedItemInspectorBar,
+        openNoteViewer: window.openLineItemViewerModal,
         deleteAnnotation: window.deleteAnnotationTwoWay,
         shareAnnotation: window.shareAnnotationItem,
         renderGlobalNotesHub: window.renderA1GlobalAnnotations
